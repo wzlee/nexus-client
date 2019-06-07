@@ -1,12 +1,14 @@
 package juglab.nexus.client;
 
+import javax.ws.rs.ForbiddenException;
+import javax.ws.rs.NotAuthorizedException;
+import javax.ws.rs.NotFoundException;
+
 import org.jboss.resteasy.spi.HttpResponseCodes;
 
 public class NexusReSTClientException extends Exception {
 
 	private static final long serialVersionUID = 7754846161853588131L;
-
-	private String localMessage = null;
 
 	public NexusReSTClientException() {
 		super();
@@ -24,26 +26,20 @@ public class NexusReSTClientException extends Exception {
 		super( cause );
 	}
 
-	public NexusReSTClientException( int httpStatus ) {
-
-		switch (httpStatus) {
-			case (HttpResponseCodes.SC_FORBIDDEN):
-				localMessage = "Forbidden request (code " + httpStatus + ")";
-			break;
-			case (HttpResponseCodes.SC_UNAUTHORIZED):
-				localMessage = "Unauthorized request (code " + httpStatus + ")";
-			break;
-			default:
-				localMessage = "Server returned code " + httpStatus;
-			break;
-		}
-	}
-
-	@Override
-	public String getMessage() {
-		if ( localMessage != null )
-			return localMessage;
+	/**
+	 * Convenience method to facilitate feedback to user
+	 * 
+	 * @return an HTTP Error Code if exception was caused by a server error, else returns 0
+	 * @see org.jboss.resteasy.util.HttpResponseCodes
+	 */
+	public int getHttpErrorCode() {
+		if ( getCause() instanceof NotFoundException)
+			return HttpResponseCodes.SC_NOT_FOUND;
+		if ( getCause() instanceof ForbiddenException)
+			return HttpResponseCodes.SC_FORBIDDEN;
+		if ( getCause() instanceof NotAuthorizedException)
+			return HttpResponseCodes.SC_UNAUTHORIZED;
 		else
-			return super.getMessage();
+			return 0;
 	}
 }

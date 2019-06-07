@@ -1,104 +1,143 @@
 package juglab.nexus.client;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
-import org.jboss.resteasy.annotations.jaxrs.PathParam;
-import org.jboss.resteasy.annotations.jaxrs.QueryParam;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
 
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import juglab.nexus.client.domain.Repository;
 
 /**
- * <p>
- * Client for the Nexus Sonatype ReST service. 
- * Uses the <a href="https://docs.jboss.org/resteasy/docs/4.0.0.Final/userguide/html/RESTEasy_Client_Framework.html">RESTEasy Proxy Framework</a>
- * </p>
  */
-public interface NexusReSTClient {
+public class NexusReSTClient {
 
-	/**
-	 * List assets - assets are individual files
-	 * 
-	 * @param repository name
-	 * @return a (JSON) list of assets for given repository
-	 */
-	@GET
-	@Path("/service/rest/v1/assets")
-	@Produces(MediaType.APPLICATION_JSON)
-	public String listAssets(@QueryParam("repository") String repositoryName);
-	
-	/**
-	 * Get an asset
-	 * 
-	 * @param id of asset to be retrieved
-	 * @return a JSON list of the asset information, including the direct download URL
-	 */
-	@GET
-	@Path("/service/rest/v1/assets/{id}")
-	@Produces(MediaType.APPLICATION_JSON)
-	public String getAsset(@PathParam("id") String id);
+	private final static String TMPDIR = System.getProperty( "java.io.tmpdir" );
 
-	/**
-	 * Delete an asset
-	 * 
-	 * @param id of asset to be deleted
-	 * @return Response object which should be checked for success/failure
-	 */
-	@DELETE
-	@Path("/service/rest/v1/assets/{id}")
-	@Consumes(MediaType.TEXT_PLAIN)
-	public Response deleteAsset(@PathParam("id") String id);
-	
-	
-	/**
-	 * List components - components are collections of assets 
-	 * see https://help.sonatype.com/repomanager3/repository-manager-concepts/components%2C-repositories%2C-and-repository-formats
-	 * 
-	 * @param repository name
-	 * @return a list of components for given repository
-	 */
-	@GET
-	@Path("/service/rest/v1/components")
-	@Produces(MediaType.APPLICATION_JSON)
-	public String listComponents(@QueryParam("repository") String repositoryName);
+	public static List< Repository > listRepositories( String baseURL) throws NexusReSTClientException {
+		Client client = null;
+		try {
+			client = ClientBuilder.newClient();
+			ResteasyWebTarget webTarget = ( ResteasyWebTarget ) client.target( baseURL );
+			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
+			String response = restClient.listRepositories();
+			ObjectMapper objectMapper = new ObjectMapper();
+			objectMapper.configure(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true);
+			return Arrays.asList( objectMapper.readValue(response, Repository[].class));
+		} catch ( RuntimeException | IOException e ) {
+			throw new NexusReSTClientException( e );
+		}
+		finally {
+			client.close();
+		}
+	};
 
-	/**
-	 * Get a component
-	 * 
-	 * @param id of component to be retrieved
-	 * @return a JSON list of the asset information, including the direct download URL
-	 */
-	@GET
-	@Path("/service/rest/v1/components/{id}")
-	@Produces(MediaType.APPLICATION_JSON)
-	public String getComponent(@PathParam("id") String id);
-	
-	/**
-	 * Delete a component
-	 * 
-	 * @param id of component to be deleted
-	 * @return Response object which should be checked for success/failure
-	 */
-	@DELETE
-	@Path("/service/rest/v1/components/{id}")
-	@Consumes(MediaType.TEXT_PLAIN)
-	public Response deleteComponent(@PathParam("id") String id);
-	
-	/**
-	 * Upload a component
-	 * 
-	 * @param id of component to be deleted
-	 * @return Response object which should be checked for success/failure
-	 */
-	@POST
-	@Path("/service/rest/v1/components")
-	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	public Response uploadComponent();
+	public static Map< String, Object >
+			listAssets( String baseURL, String repositoryName ) throws NexusReSTClientException {
+		Client client = null;
+		try {
+			client = ClientBuilder.newClient();
+			ResteasyWebTarget webTarget = ( ResteasyWebTarget ) client.target( baseURL );
+			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
+			String response = restClient.listAssets( repositoryName );
+			ObjectMapper objectMapper = new ObjectMapper();
+			return objectMapper.readValue(
+					response,
+					new TypeReference< Map< String, Object > >() {} );
+		} catch ( RuntimeException | IOException e ) {
+			throw new NexusReSTClientException( e );
+		}
+		finally {
+			client.close();
+		}
+	};
 
-	
+	public static File getAsset(
+			String baseURL,
+			String assetId,
+			String downloadDir ) throws NexusReSTClientException {
+		return getAsset( baseURL, null, null, assetId, downloadDir );
+	}
+
+	public static File getAsset(
+			String baseURL,
+			String usrName,
+			String pwd,
+			String assetId,
+			String downloadDir ) throws NexusReSTClientException {
+		Client client = null;
+		try {
+			client = ClientBuilder.newClient();
+			WebTarget target = client.target( baseURL );
+			ResteasyWebTarget webTarget = ( ResteasyWebTarget ) target;
+			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
+
+			String response = restClient.getAsset( assetId );
+			ObjectMapper objectMapper = new ObjectMapper();
+			JsonNode jsonNode = objectMapper.readTree( response );
+			String url = jsonNode.get( "downloadUrl" ).asText();
+			return saveAsset( url, downloadDir );
+
+		} catch ( RuntimeException | IOException e ) {
+			throw new NexusReSTClientException( e );
+		}
+		finally {
+			client.close();
+		}
+	};
+
+	public static void deleteAsset(
+			String baseURL,
+			String usrName,
+			String pwd,
+			String assetId ) throws NexusReSTClientException {
+		Client client = null;
+		try {
+			client = ClientBuilder.newClient();
+			WebTarget target = client.target( baseURL );
+			ResteasyWebTarget rtarget = ( ResteasyWebTarget ) target;
+			NexusReSTClientProxy restClient = rtarget.proxy( NexusReSTClientProxy.class );
+			restClient.deleteAsset( assetId );
+		} catch ( RuntimeException e ) {
+			throw new NexusReSTClientException( e );
+		}
+	};
+
+	private static File saveAsset( String url, String downloadDir ) throws IOException {
+
+		String fileName = url.substring( url.lastIndexOf( '/' ) + 2 );
+		String tmpPath = TMPDIR + File.pathSeparator + fileName;
+		String filePath =
+				downloadDir + File.pathSeparator + fileName;
+		ReadableByteChannel readableByteChannel =
+				Channels.newChannel( new URL( url ).openStream() );
+		FileOutputStream fileOutputStream = new FileOutputStream( filePath );
+		fileOutputStream.getChannel().transferFrom( readableByteChannel, 0, Long.MAX_VALUE );
+		fileOutputStream.close();
+		Files.copy(
+				Paths.get( tmpPath ),
+				Paths.get( filePath ),
+				StandardCopyOption.REPLACE_EXISTING );
+		return new File( filePath );
+
+	}
+
 }
