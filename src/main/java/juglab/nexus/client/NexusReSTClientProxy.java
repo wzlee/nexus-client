@@ -33,6 +33,22 @@ public interface NexusReSTClientProxy {
 	public String listRepositories();
 	
 	/**
+	 * Search for assets
+	 */
+	@GET
+	@Path("/service/rest/v1/search/assets")
+	@Produces(MediaType.APPLICATION_JSON)
+	public String searchAssets(@QueryParam("q") String query, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version);
+	
+	/**
+	 * Search for assets and download
+	 */
+	@GET
+	@Path("/service/rest/v1/search/assets/download")
+	@Produces(MediaType.APPLICATION_JSON)
+	public String searchAssetsDownload(@QueryParam("q") String query, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version);
+	
+	/**
 	 * List assets - assets are individual files
 	 * 
 	 * @param repository name
@@ -41,7 +57,7 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/assets")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String listAssets(@QueryParam("repository") String repositoryName);
+	public String listAssets(@QueryParam("repository") String repository);
 	
 	/**
 	 * Get an asset
@@ -58,12 +74,20 @@ public interface NexusReSTClientProxy {
 	 * Delete an asset
 	 * 
 	 * @param id of asset to be deleted
-	 * @return Response object which should be checked for success/failure
+	 * 
 	 */
 	@DELETE
 	@Path("/service/rest/v1/assets/{id}")
 	@Consumes(MediaType.TEXT_PLAIN)
 	public void deleteAsset(@PathParam("id") String id);
+	
+	/**
+	 * Search for components
+	 */
+	@GET
+	@Path("/service/rest/v1/search")
+	@Produces(MediaType.APPLICATION_JSON)
+	public String searchComponents(@QueryParam("q") String query, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version);
 	
 	
 	/**
@@ -76,7 +100,7 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/components")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String listComponents(@QueryParam("repository") String repositoryName);
+	public String listComponents(@QueryParam("repository") String repository);
 
 	/**
 	 * Get a component
@@ -93,23 +117,21 @@ public interface NexusReSTClientProxy {
 	 * Delete a component
 	 * 
 	 * @param id of component to be deleted
-	 * @return Response object which should be checked for success/failure
 	 */
 	@DELETE
 	@Path("/service/rest/v1/components/{id}")
 	@Consumes(MediaType.TEXT_PLAIN)
-	public Response deleteComponent(@PathParam("id") String id);
+	public void deleteComponent(@PathParam("id") String id);
 	
 	/**
 	 * Upload a component
 	 * 
 	 * @param id of component to be deleted
-	 * @return Response object which should be checked for success/failure
 	 */
 	@POST
 	@Path("/service/rest/v1/components")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	public Response uploadComponent();
+	public void uploadComponent();
 
 	
 }

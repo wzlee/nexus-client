@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import juglab.nexus.client.domain.Asset;
+import juglab.nexus.client.domain.Component;
 import juglab.nexus.client.domain.Repository;
 
 /**
@@ -32,7 +34,15 @@ public class NexusReSTClient {
 
 	private final static String TMPDIR = System.getProperty( "java.io.tmpdir" );
 
-	public static List< Repository > listRepositories( String baseURL) throws NexusReSTClientException {
+	private String baseURL;
+	private String continuationToken = null;
+
+	public NexusReSTClient( String baseURL ) {
+
+		this.baseURL = baseURL;
+	}
+
+	public List< Repository > listRepositories() throws NexusReSTClientException {
 		Client client = null;
 		try {
 			client = ClientBuilder.newClient();
@@ -40,8 +50,8 @@ public class NexusReSTClient {
 			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
 			String response = restClient.listRepositories();
 			ObjectMapper objectMapper = new ObjectMapper();
-			objectMapper.configure(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true);
-			return Arrays.asList( objectMapper.readValue(response, Repository[].class));
+			objectMapper.configure( DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true );
+			return Arrays.asList( objectMapper.readValue( response, Repository[].class ) );
 		} catch ( RuntimeException | IOException e ) {
 			throw new NexusReSTClientException( e );
 		}
@@ -50,18 +60,21 @@ public class NexusReSTClient {
 		}
 	};
 
-	public static Map< String, Object >
-			listAssets( String baseURL, String repositoryName ) throws NexusReSTClientException {
+	@SuppressWarnings( "unchecked" )
+	public List< Asset >
+			listAssets( String repository) throws NexusReSTClientException {
 		Client client = null;
 		try {
 			client = ClientBuilder.newClient();
 			ResteasyWebTarget webTarget = ( ResteasyWebTarget ) client.target( baseURL );
 			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
-			String response = restClient.listAssets( repositoryName );
+			String response = restClient.listAssets( repository);
 			ObjectMapper objectMapper = new ObjectMapper();
-			return objectMapper.readValue(
+			Map< String, Object > map = objectMapper.readValue(
 					response,
-					new TypeReference< Map< String, Object > >() {} );
+					Map.class );
+			continuationToken = ( String ) map.get( "continuationToken" );
+			return objectMapper.convertValue( map.get( "items" ), new TypeReference< List< Asset > >() {} );
 		} catch ( RuntimeException | IOException e ) {
 			throw new NexusReSTClientException( e );
 		}
@@ -70,15 +83,13 @@ public class NexusReSTClient {
 		}
 	};
 
-	public static File getAsset(
-			String baseURL,
+	public File getAsset(
 			String assetId,
 			String downloadDir ) throws NexusReSTClientException {
-		return getAsset( baseURL, null, null, assetId, downloadDir );
+		return getAsset( null, null, assetId, downloadDir );
 	}
 
-	public static File getAsset(
-			String baseURL,
+	public File getAsset(
 			String usrName,
 			String pwd,
 			String assetId,
@@ -91,10 +102,9 @@ public class NexusReSTClient {
 			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
 
 			String response = restClient.getAsset( assetId );
-			ObjectMapper objectMapper = new ObjectMapper();
-			JsonNode jsonNode = objectMapper.readTree( response );
-			String url = jsonNode.get( "downloadUrl" ).asText();
-			return saveAsset( url, downloadDir );
+			ObjectMapper mapper = new ObjectMapper();
+			Asset asset =  mapper.readValue(response, Asset.class);
+			return saveAsset( asset.getDownloadUrl(), downloadDir );
 
 		} catch ( RuntimeException | IOException e ) {
 			throw new NexusReSTClientException( e );
@@ -104,8 +114,7 @@ public class NexusReSTClient {
 		}
 	};
 
-	public static void deleteAsset(
-			String baseURL,
+	public void deleteAsset(
 			String usrName,
 			String pwd,
 			String assetId ) throws NexusReSTClientException {
@@ -120,8 +129,82 @@ public class NexusReSTClient {
 			throw new NexusReSTClientException( e );
 		}
 	};
+	
+	@SuppressWarnings( "unchecked" )
+	public List< Component >
+			listComponents( String repository) throws NexusReSTClientException {
+		Client client = null;
+		try {
+			client = ClientBuilder.newClient();
+			ResteasyWebTarget webTarget = ( ResteasyWebTarget ) client.target( baseURL );
+			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
+			String response = restClient.listComponents( repository);
+			ObjectMapper objectMapper = new ObjectMapper();
+			Map< String, Object > map = objectMapper.readValue( response, Map.class );
+			continuationToken = ( String ) map.get( "continuationToken" );
+			return objectMapper.convertValue( map.get( "items" ), new TypeReference< List< Component > >() {} );
+		} catch ( RuntimeException | IOException e ) {
+			throw new NexusReSTClientException( e );
+		}
+		finally {
+			client.close();
+		}
+	};
+	
+	public File getComponent(
+			String id,
+			String downloadDir ) throws NexusReSTClientException {
+		return getAsset( null, null, id, downloadDir );
+	}
 
-	private static File saveAsset( String url, String downloadDir ) throws IOException {
+	public File getComponent(
+			String usrName,
+			String pwd,
+			String id,
+			String downloadDir ) throws NexusReSTClientException {
+		Client client = null;
+		try {
+			client = ClientBuilder.newClient();
+			WebTarget target = client.target( baseURL );
+			ResteasyWebTarget webTarget = ( ResteasyWebTarget ) target;
+			NexusReSTClientProxy restClient = webTarget.proxy( NexusReSTClientProxy.class );
+
+			String response = restClient.getComponent( id );
+			ObjectMapper objectMapper = new ObjectMapper();
+			JsonNode jsonNode = objectMapper.readTree( response );
+			String url = jsonNode.get( "downloadUrl" ).asText();
+			return saveComponent( url, downloadDir );
+
+		} catch ( RuntimeException | IOException e ) {
+			throw new NexusReSTClientException( e );
+		}
+		finally {
+			client.close();
+		}
+	};
+
+
+
+	private File saveAsset( String url, String downloadDir ) throws IOException {
+
+		String fileName = url.substring( url.lastIndexOf( '/' ) + 2 );
+		String tmpPath = TMPDIR + File.pathSeparator + fileName;
+		String filePath =
+				downloadDir + File.pathSeparator + fileName;
+		ReadableByteChannel readableByteChannel =
+				Channels.newChannel( new URL( url ).openStream() );
+		FileOutputStream fileOutputStream = new FileOutputStream( filePath );
+		fileOutputStream.getChannel().transferFrom( readableByteChannel, 0, Long.MAX_VALUE );
+		fileOutputStream.close();
+		Files.copy(
+				Paths.get( tmpPath ),
+				Paths.get( filePath ),
+				StandardCopyOption.REPLACE_EXISTING );
+		return new File( filePath );
+
+	}
+	
+	private File saveComponent( String url, String downloadDir ) throws IOException {
 
 		String fileName = url.substring( url.lastIndexOf( '/' ) + 2 );
 		String tmpPath = TMPDIR + File.pathSeparator + fileName;
@@ -140,4 +223,22 @@ public class NexusReSTClient {
 
 	}
 
+
+	public String getBaseURL() {
+		return baseURL;
+	}
+
+	public void setBaseURL( String baseURL ) {
+		this.baseURL = baseURL;
+	}
+
+	public String getContinuationToken() {
+		return continuationToken;
+	}
+
+	public boolean hasContinuationToken() {
+
+		return ( continuationToken != null );
+
+	}
 }
