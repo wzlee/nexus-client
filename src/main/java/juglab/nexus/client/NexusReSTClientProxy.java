@@ -7,7 +7,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
 import org.jboss.resteasy.annotations.jaxrs.QueryParam;
@@ -38,7 +37,7 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/search/assets")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String searchAssets(@QueryParam("q") String query, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version);
+	public String searchAssets(@QueryParam("sort") String sort, @QueryParam("direction") String order, @QueryParam("q") String keyword, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version, @QueryParam("maven.groupId") String mavenGroupId, @QueryParam("maven.artifactId") String mavenArtifactId, @QueryParam("continuationToken") String continuationToken);
 	
 	/**
 	 * Search for assets and download
@@ -46,7 +45,7 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/search/assets/download")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String searchAssetsDownload(@QueryParam("q") String query, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version);
+	public String searchAssetsDownload(@QueryParam("sort") String sort, @QueryParam("direction") String order, @QueryParam("q") String keyword, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version, @QueryParam("maven.groupId") String mavenGroupId, @QueryParam("maven.artifactId") String mavenArtifactId, @QueryParam("continuationToken") String continuationToken);
 	
 	/**
 	 * List assets - assets are individual files
@@ -57,7 +56,8 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/assets")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String listAssets(@QueryParam("repository") String repository);
+	public String listAssets(@QueryParam("repository") String repository, @QueryParam("continuationToken") String continuationToken);
+
 	
 	/**
 	 * Get an asset
@@ -87,7 +87,7 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/search")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String searchComponents(@QueryParam("q") String query, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version);
+	public String searchComponents(@QueryParam("sort") String sort, @QueryParam("direction") String order, @QueryParam("q") String keyword, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version, @QueryParam("maven.groupId") String mavenGroupId, @QueryParam("maven.artifactId") String mavenArtifactId, @QueryParam("continuationToken") String continuationToken);
 	
 	
 	/**
@@ -100,7 +100,7 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/components")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String listComponents(@QueryParam("repository") String repository);
+	public String listComponents(@QueryParam("repository") String repository, @QueryParam("continuationToken") String continuationToken);
 
 	/**
 	 * Get a component

@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import juglab.nexus.client.domain.Asset;
 import juglab.nexus.client.domain.Component;
+import juglab.nexus.client.domain.Query;
 import juglab.nexus.client.domain.Repository;
 
 /**
@@ -24,34 +25,42 @@ public class NexusReSTClientTest {
 			"aW1hZ2VqLXB1YmxpYzoxMzRmNmM1NjJmOTU4NDJmOTVjYmI1Y2IyZDc1MTEzZg";
 	private final static String COMPONENT_ID = "bWF2ZW4tcHVibGljOjU4YWQyNTA2ZGE3Y2Y0YjU2NDk5OWE3NjQ0ZGM0ZGJj";
 	private final static String TMPDIR = System.getProperty( "java.io.tmpdir" );
-	
+
 	private static NexusReSTClient client;
-	
+	private static NexusReSTClient authClient;
+
 	@BeforeClass
 	public static void init() {
-		client = new NexusReSTClient(BASE_URL);
+		client = new NexusReSTClient( BASE_URL );
+		authClient = new NexusReSTClient( BASE_URL, "dadada", "ddddd" );
 	}
 
 	@Test
 	public void testListRepositories() throws Exception {
-		List<Repository> repos = client.listRepositories();
+		List< Repository > repos = client.listRepositories();
 		assertTrue( repos.size() > 0 );
 		boolean testraw = false;
 		boolean testmaven = false;
-		for (Repository repo: repos)
-		{
-			if (repo.getName().equals( "test-raw" )) testraw = true;
-			if (repo.getName().equals( "test-maven" )) testmaven = true;
+		for ( Repository repo : repos ) {
+			if ( repo.getName().equals( "test-raw" ) ) testraw = true;
+			if ( repo.getName().equals( "test-maven" ) ) testmaven = true;
 		}
-		assertTrue(testraw);
-		assertTrue(testmaven);
+		assertTrue( testraw );
+		assertTrue( testmaven );
 	};
 
 	@Test
 	public void testListAssets() throws Exception {
-		List< Asset> assets = client.listAssets( ASSET_REPO );
-		assertTrue( assets.size() > 0);
-		assertTrue( client.hasContinuationToken());
+		List< Asset > assets = client.listAssets( ASSET_REPO );
+		assertTrue( assets.size() > 0 );
+	};
+
+	@Test
+	public void testSearchAssetsNonExistentName() throws Exception {
+		Query q = new Query();
+		q.setName( "xxxxx" );
+		List<Asset> assets = client.searchAssets( q );
+		assertTrue(assets.size() == 0);
 	};
 
 	@Test
@@ -71,25 +80,32 @@ public class NexusReSTClientTest {
 	};
 
 	@Test
+	public void testListComponents() throws Exception {
+		List< Component > components = client.listComponents( REPO );
+		assertTrue( components.size() > 0 );
+		Component testComp = components.get( 0 );
+		assertTrue( testComp.getId().equals( COMPONENT_ID ) );
+		assertTrue( testComp.getRepository().equals( "maven-public" ) );
+		assertTrue( testComp.getAssets().size() > 0 );
+
+	}
+
+	@Test
 	public void testAnonCannotDeleteAsset() {
 		try {
-			client.deleteAsset( null, null, ASSET_ID );
+			client.deleteAsset( ASSET_ID );
 		} catch ( NexusReSTClientException e ) {
 			assertEquals( 403, e.getHttpErrorCode() );
 		}
 	};
-	
+
 	@Test
-	public void testListComponents() throws Exception {
-		List<Component> components = client.listComponents(REPO);
-		assertTrue( components.size() > 0 );
-		Component testComp = components.get(0);
-		assertTrue(testComp.getId().equals( COMPONENT_ID));
-		assertTrue(testComp.getRepository().equals( "maven-public"));
-		assertTrue(testComp.getAssets().size() > 0);
-		
+	public void testDeleteAssetWrongAuth() {
+		try {
+			authClient.deleteAsset( ASSET_ID );
+		} catch ( NexusReSTClientException e ) {
+			assertEquals( 401, e.getHttpErrorCode() );
+		}
 	};
-	
-	
 
 }
