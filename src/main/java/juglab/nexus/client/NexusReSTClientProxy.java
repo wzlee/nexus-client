@@ -45,7 +45,7 @@ public interface NexusReSTClientProxy {
 	@GET
 	@Path("/service/rest/v1/search/assets/download")
 	@Produces(MediaType.APPLICATION_JSON)
-	public String searchAssetsDownload(@QueryParam("sort") String sort, @QueryParam("direction") String order, @QueryParam("q") String keyword, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version, @QueryParam("maven.groupId") String mavenGroupId, @QueryParam("maven.artifactId") String mavenArtifactId, @QueryParam("continuationToken") String continuationToken);
+	public String searchAssetsAndDownload(@QueryParam("sort") String sort, @QueryParam("direction") String order, @QueryParam("q") String keyword, @QueryParam("repository") String repository, @QueryParam("format") String format, @QueryParam("group") String group, @QueryParam("name") String name, @QueryParam("version") String version, @QueryParam("maven.groupId") String mavenGroupId, @QueryParam("maven.artifactId") String mavenArtifactId);
 	
 	/**
 	 * List assets - assets are individual files

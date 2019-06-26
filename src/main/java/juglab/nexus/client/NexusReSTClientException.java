@@ -1,5 +1,6 @@
 package juglab.nexus.client;
 
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.ForbiddenException;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.NotFoundException;
@@ -39,6 +40,10 @@ public class NexusReSTClientException extends Exception {
 			return HttpResponseCodes.SC_FORBIDDEN;
 		if ( getCause() instanceof NotAuthorizedException)
 			return HttpResponseCodes.SC_UNAUTHORIZED;
+		if ( getCause() instanceof BadRequestException)
+			return HttpResponseCodes.SC_BAD_REQUEST;
+		if ( getCause() instanceof NotFoundException)
+			return HttpResponseCodes.SC_NOT_FOUND;
 		else
 			return 0;
 	}

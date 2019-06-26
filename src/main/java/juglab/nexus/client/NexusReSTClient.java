@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+import javax.ws.rs.RedirectionException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 
@@ -72,6 +73,9 @@ public class NexusReSTClient {
 		super.finalize();
 	}
 
+	/**
+	 * List all the repositories (local and mirrored) hosted on server
+	 */
 	public List< Repository > listRepositories() throws NexusReSTClientException {
 		try {
 			String response = restClient.listRepositories();
@@ -83,8 +87,79 @@ public class NexusReSTClient {
 		}
 	};
 
+	/**
+	 * Search for one or more assets using one or more search parameters
+	 * 
+	 * @param q
+	 *            - Query object in which a number of supported search
+	 *            parameters can be set
+	 * @see juglab.nexus.client.domain.Query
+	 */
 	public List< Asset > searchAssets( Query q ) throws NexusReSTClientException {
 		return searcher( q, this::searchAssets, new TypeReference< List< Asset > >() {} );
+	}
+
+	/**
+	 * Search for an assets and download it using one or more search parameters.
+	 * 
+	 * Check for the following error code returns:
+	 * 400 : Search returned multiple assets. Refine search criteria to
+	 * find a single asset or use the sort query parameter to retrieve the first
+	 * result.
+	 * 404 : Asset search returned no results
+	 * 
+	 * @param q
+	 *            - Query object in which a number of supported search
+	 *            parameters can be set
+	 * @param fileName
+	 *            - what to name the download
+	 * @param downloadDir
+	 *            - where to download the asset to
+	 * @return File handle to down loaded asset
+	 * 
+	 * @throws NexusReSTClientException
+	 * 
+	 *             Check for the following error code returns:
+	 *             400 : Search returned multiple assets. Refine search criteria
+	 *             to
+	 *             find a single asset or use the sort query parameter to
+	 *             retrieve the first
+	 *             result.
+	 *             404 : Asset search returned no results
+	 * 
+	 * @see juglab.nexus.client.domain.Query
+	 */
+	public File searchAssetsAndDownload( Query q, String fileName, String downloadDir ) throws NexusReSTClientException {
+		try {
+			restClient.searchAssetsAndDownload(
+					q.getSortBy(),
+					q.getOrderBy(),
+					q.getKeyword(),
+					q.getRepository(),
+					q.getFormat(),
+					q.getGroup(),
+					q.getName(),
+					q.getVersion(),
+					q.getMavenGroupId(),
+					q.getMavenArtifactId() );
+
+		} catch ( RuntimeException e ) {
+			if ( e instanceof RedirectionException ) {
+				URL url;
+				try {
+					url = ( ( RedirectionException ) e ).getLocation().toURL();
+					String tmpPath = TMPDIR + File.pathSeparator + fileName;
+					String finalPath =
+							downloadDir + File.pathSeparator + fileName;
+					return saveToFile(url, tmpPath, finalPath);
+				} catch ( IOException e1 ) {
+					throw new NexusReSTClientException( e1 );
+				}
+			}
+			throw new NexusReSTClientException( e );
+		}
+		return null;
+
 	}
 
 	public List< Asset > listAssets( String repository ) throws NexusReSTClientException {
@@ -111,7 +186,7 @@ public class NexusReSTClient {
 			throw new NexusReSTClientException( e );
 		}
 	};
-	
+
 	public List< Component > searchComponents( Query q ) throws NexusReSTClientException {
 		return searcher( q, this::searchComponents, new TypeReference< List< Component > >() {} );
 	}
@@ -217,19 +292,9 @@ public class NexusReSTClient {
 
 		String fileName = url.substring( url.lastIndexOf( '/' ) + 2 );
 		String tmpPath = TMPDIR + File.pathSeparator + fileName;
-		String filePath =
+		String finalPath =
 				downloadDir + File.pathSeparator + fileName;
-		ReadableByteChannel readableByteChannel =
-				Channels.newChannel( new URL( url ).openStream() );
-		FileOutputStream fileOutputStream = new FileOutputStream( filePath );
-		fileOutputStream.getChannel().transferFrom( readableByteChannel, 0, Long.MAX_VALUE );
-		fileOutputStream.close();
-		Files.copy(
-				Paths.get( tmpPath ),
-				Paths.get( filePath ),
-				StandardCopyOption.REPLACE_EXISTING );
-		return new File( filePath );
-
+		return saveToFile(new URL( url ), tmpPath, finalPath);
 	}
 
 	private List< File > saveComponent( Component component, String downloadDir ) throws IOException {
@@ -240,20 +305,25 @@ public class NexusReSTClient {
 			String url = asset.getDownloadUrl();
 			String fileName = url.substring( url.lastIndexOf( '/' ) + 2 );
 			String tmpPath = TMPDIR + File.pathSeparator + fileName;
-			String filePath =
+			String finalPath =
 					downloadDir + File.pathSeparator + fileName;
-			ReadableByteChannel readableByteChannel =
-					Channels.newChannel( new URL( url ).openStream() );
-			FileOutputStream fileOutputStream = new FileOutputStream( filePath );
-			fileOutputStream.getChannel().transferFrom( readableByteChannel, 0, Long.MAX_VALUE );
-			fileOutputStream.close();
-			Files.copy(
-					Paths.get( tmpPath ),
-					Paths.get( filePath ),
-					StandardCopyOption.REPLACE_EXISTING );
-			files.add( new File( filePath ) );
+			files.add( saveToFile(new URL( url ), tmpPath, finalPath) );
 		}
 		return files;
 
+	}
+	
+	private File saveToFile(URL url, String tmpPath, String finalPath) throws IOException {
+
+		ReadableByteChannel readableByteChannel =
+				Channels.newChannel( url.openStream() );
+		FileOutputStream fileOutputStream = new FileOutputStream( tmpPath );
+		fileOutputStream.getChannel().transferFrom( readableByteChannel, 0, Long.MAX_VALUE );
+		fileOutputStream.close();
+		Files.copy(
+				Paths.get( tmpPath ),
+				Paths.get( finalPath ),
+				StandardCopyOption.REPLACE_EXISTING );
+		return new File(finalPath);
 	}
 }
