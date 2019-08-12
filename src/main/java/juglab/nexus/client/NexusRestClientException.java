@@ -7,23 +7,23 @@ import javax.ws.rs.NotFoundException;
 
 import org.jboss.resteasy.spi.HttpResponseCodes;
 
-public class NexusReSTClientException extends Exception {
+public class NexusRestClientException extends Exception {
 
 	private static final long serialVersionUID = 7754846161853588131L;
 
-	public NexusReSTClientException() {
+	public NexusRestClientException() {
 		super();
 	}
 
-	public NexusReSTClientException( String message, Throwable cause ) {
+	public NexusRestClientException( String message, Throwable cause ) {
 		super( message, cause );
 	}
 
-	public NexusReSTClientException( String message ) {
+	public NexusRestClientException( String message ) {
 		super( message );
 	}
 
-	public NexusReSTClientException( Throwable cause ) {
+	public NexusRestClientException( Throwable cause ) {
 		super( cause );
 	}
 

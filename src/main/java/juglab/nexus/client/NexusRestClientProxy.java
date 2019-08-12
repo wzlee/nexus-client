@@ -18,7 +18,7 @@ import org.jboss.resteasy.annotations.jaxrs.QueryParam;
  * Uses the <a href="https://docs.jboss.org/resteasy/docs/4.0.0.Final/userguide/html/RESTEasy_Client_Framework.html">RESTEasy Proxy Framework</a>
  * </p>
  */
-public interface NexusReSTClientProxy {
+public interface NexusRestClientProxy {
 
 	/**
 	 * List all repositories

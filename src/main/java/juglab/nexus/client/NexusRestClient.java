@@ -33,22 +33,22 @@ import juglab.nexus.client.domain.Repository;
 
 /**
  */
-public class NexusReSTClient {
+public class NexusRestClient {
 
 	private final static String TMPDIR = System.getProperty( "java.io.tmpdir" );
 
 	private Client client;
-	private NexusReSTClientProxy restClient;
+	private NexusRestClientProxy restClient;
 
 	/**
 	 * 
 	 * @param baseURL
 	 *            the url of the Nexus repository
 	 */
-	public NexusReSTClient( String baseURL ) {
+	public NexusRestClient( String baseURL ) {
 		client = ClientBuilder.newClient();
 		ResteasyWebTarget webTarget = ( ResteasyWebTarget ) client.target( baseURL );
-		restClient = webTarget.proxy( NexusReSTClientProxy.class );
+		restClient = webTarget.proxy( NexusRestClientProxy.class );
 	}
 
 	/**
@@ -60,12 +60,12 @@ public class NexusReSTClient {
 	 * @param username
 	 * @param password
 	 */
-	public NexusReSTClient( String baseURL, String username, String password ) {
+	public NexusRestClient( String baseURL, String username, String password ) {
 		client = ClientBuilder.newClient();
 		ResteasyWebTarget webTarget = ( ResteasyWebTarget ) client.target( baseURL );
 		if ( username != null && password != null )
 			webTarget.register( new BasicAuthentication( username, password ) );
-		restClient = webTarget.proxy( NexusReSTClientProxy.class );
+		restClient = webTarget.proxy( NexusRestClientProxy.class );
 	}
 
 	protected void finalize() throws Throwable {
@@ -76,14 +76,14 @@ public class NexusReSTClient {
 	/**
 	 * List all the repositories (local and mirrored) hosted on server
 	 */
-	public List< Repository > listRepositories() throws NexusReSTClientException {
+	public List< Repository > listRepositories() throws NexusRestClientException {
 		try {
 			String response = restClient.listRepositories();
 			ObjectMapper mapper = new ObjectMapper();
 			mapper.configure( DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true );
 			return Arrays.asList( mapper.readValue( response, Repository[].class ) );
 		} catch ( RuntimeException | IOException e ) {
-			throw new NexusReSTClientException( e );
+			throw new NexusRestClientException( e );
 		}
 	};
 
@@ -95,7 +95,7 @@ public class NexusReSTClient {
 	 *            parameters can be set
 	 * @see juglab.nexus.client.domain.Query
 	 */
-	public List< Asset > searchAssets( Query q ) throws NexusReSTClientException {
+	public List< Asset > searchAssets( Query q ) throws NexusRestClientException {
 		return searcher( q, this::searchAssets, new TypeReference< List< Asset > >() {} );
 	}
 
@@ -117,7 +117,7 @@ public class NexusReSTClient {
 	 *            - where to download the asset to
 	 * @return File handle to down loaded asset
 	 * 
-	 * @throws NexusReSTClientException
+	 * @throws NexusRestClientException
 	 * 
 	 *             Check for the following error code returns:
 	 *             400 : Search returned multiple assets. Refine search criteria
@@ -129,7 +129,7 @@ public class NexusReSTClient {
 	 * 
 	 * @see juglab.nexus.client.domain.Query
 	 */
-	public File searchAssetsAndDownload( Query q, String fileName, String downloadDir ) throws NexusReSTClientException {
+	public File searchAssetsAndDownload( Query q, String fileName, String downloadDir ) throws NexusRestClientException {
 		try {
 			restClient.searchAssetsAndDownload(
 					q.getSortBy(),
@@ -153,50 +153,50 @@ public class NexusReSTClient {
 							downloadDir + File.pathSeparator + fileName;
 					return saveToFile(url, tmpPath, finalPath);
 				} catch ( IOException e1 ) {
-					throw new NexusReSTClientException( e1 );
+					throw new NexusRestClientException( e1 );
 				}
 			}
-			throw new NexusReSTClientException( e );
+			throw new NexusRestClientException( e );
 		}
 		return null;
 
 	}
 
-	public List< Asset > listAssets( String repository ) throws NexusReSTClientException {
+	public List< Asset > listAssets( String repository ) throws NexusRestClientException {
 		return ( List< Asset > ) lister( repository, restClient::listAssets, new TypeReference< List< Asset > >() {} );
 	};
 
 	public File getAsset(
 			String assetId,
-			String downloadDir ) throws NexusReSTClientException {
+			String downloadDir ) throws NexusRestClientException {
 		try {
 			String response = restClient.getAsset( assetId );
 			ObjectMapper mapper = new ObjectMapper();
 			Asset asset = mapper.readValue( response, Asset.class );
 			return saveAsset( asset.getDownloadUrl(), downloadDir );
 		} catch ( RuntimeException | IOException e ) {
-			throw new NexusReSTClientException( e );
+			throw new NexusRestClientException( e );
 		}
 	};
 
-	public void deleteAsset( String assetId ) throws NexusReSTClientException {
+	public void deleteAsset( String assetId ) throws NexusRestClientException {
 		try {
 			restClient.deleteAsset( assetId );
 		} catch ( RuntimeException e ) {
-			throw new NexusReSTClientException( e );
+			throw new NexusRestClientException( e );
 		}
 	};
 
-	public List< Component > searchComponents( Query q ) throws NexusReSTClientException {
+	public List< Component > searchComponents( Query q ) throws NexusRestClientException {
 		return searcher( q, this::searchComponents, new TypeReference< List< Component > >() {} );
 	}
 
 	public List< Component >
-			listComponents( String repository ) throws NexusReSTClientException {
+			listComponents( String repository ) throws NexusRestClientException {
 		return lister( repository, restClient::listComponents, new TypeReference< List< Component > >() {} );
 	};
 
-	public List< File > getComponent( String id, String downloadDir ) throws NexusReSTClientException {
+	public List< File > getComponent( String id, String downloadDir ) throws NexusRestClientException {
 		try {
 			String response = restClient.getComponent( id );
 			ObjectMapper mapper = new ObjectMapper();
@@ -204,12 +204,12 @@ public class NexusReSTClient {
 			return saveComponent( component, downloadDir );
 
 		} catch ( RuntimeException | IOException e ) {
-			throw new NexusReSTClientException( e );
+			throw new NexusRestClientException( e );
 		}
 	};
 
 	@SuppressWarnings( "unchecked" )
-	private < T > List< T > lister( String repository, BiFunction< String, String, String > listFunction, TypeReference< List< T > > typeRef ) throws NexusReSTClientException {
+	private < T > List< T > lister( String repository, BiFunction< String, String, String > listFunction, TypeReference< List< T > > typeRef ) throws NexusRestClientException {
 		try {
 			boolean begin = true;
 			String continuationToken = "";
@@ -229,7 +229,7 @@ public class NexusReSTClient {
 			}
 			return result;
 		} catch ( RuntimeException | IOException e ) {
-			throw new NexusReSTClientException( e );
+			throw new NexusRestClientException( e );
 		}
 	}
 
@@ -249,7 +249,7 @@ public class NexusReSTClient {
 	}
 
 	@SuppressWarnings( "unchecked" )
-	private < T > List< T > searcher( Query q, BiFunction< Query, String, String > searchFunction, TypeReference< List< T > > typeRef ) throws NexusReSTClientException {
+	private < T > List< T > searcher( Query q, BiFunction< Query, String, String > searchFunction, TypeReference< List< T > > typeRef ) throws NexusRestClientException {
 		try {
 			boolean begin = true;
 			String continuationToken = "";
@@ -269,7 +269,7 @@ public class NexusReSTClient {
 			}
 			return result;
 		} catch ( RuntimeException | IOException e ) {
-			throw new NexusReSTClientException( e );
+			throw new NexusRestClientException( e );
 		}
 	}
 

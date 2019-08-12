@@ -17,7 +17,7 @@ import juglab.nexus.client.domain.Repository;
 
 /**
  */
-public class NexusReSTClientTest {
+public class NexusRestClientTest {
 
 	private final static String BASE_URL = "https://dais-maven.mpi-cbg.de";
 	private final static String ASSET_REPO = "imagej-public";
@@ -28,13 +28,13 @@ public class NexusReSTClientTest {
 	private final static String TMPDIR = System.getProperty( "java.io.tmpdir" );
 	private final static String CURDIR = System.getProperty( "user.dir" );
 
-	private static NexusReSTClient client;
-	private static NexusReSTClient authClient;
+	private static NexusRestClient client;
+	private static NexusRestClient authClient;
 
 	@BeforeClass
 	public static void init() {
-		client = new NexusReSTClient( BASE_URL );
-		authClient = new NexusReSTClient( BASE_URL, "dadada", "ddddd" );
+		client = new NexusRestClient( BASE_URL );
+		authClient = new NexusRestClient( BASE_URL, "dadada", "ddddd" );
 	}
 
 	@Test
@@ -61,7 +61,7 @@ public class NexusReSTClientTest {
 			q.setName( "commons-io" );
 			q.setVersion( "2.6" );
 			client.searchAssetsAndDownload( q, "commons-io.jar", CURDIR );
-		} catch ( NexusReSTClientException e ) {
+		} catch ( NexusRestClientException e ) {
 			assertEquals( 400, e.getHttpErrorCode() );
 		}
 	}
@@ -101,7 +101,7 @@ public class NexusReSTClientTest {
 	public void testListAssetsForUnknownRepo() {
 		try {
 			client.listAssets( "xkxkxk" );
-		} catch ( NexusReSTClientException e ) {
+		} catch ( NexusRestClientException e ) {
 			assertEquals( 404, e.getHttpErrorCode() );
 		}
 	};
@@ -128,7 +128,7 @@ public class NexusReSTClientTest {
 	public void testAnonCannotDeleteAsset() {
 		try {
 			client.deleteAsset( ASSET_ID );
-		} catch ( NexusReSTClientException e ) {
+		} catch ( NexusRestClientException e ) {
 			assertEquals( 403, e.getHttpErrorCode() );
 		}
 	};
@@ -137,7 +137,7 @@ public class NexusReSTClientTest {
 	public void testDeleteAssetWrongAuth() {
 		try {
 			authClient.deleteAsset( ASSET_ID );
-		} catch ( NexusReSTClientException e ) {
+		} catch ( NexusRestClientException e ) {
 			assertEquals( 401, e.getHttpErrorCode() );
 		}
 	};

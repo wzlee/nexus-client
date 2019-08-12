@@ -8,6 +8,11 @@
 	<name>nexus-client</name>
 	<description>a prototype cleint for the Nexus Sonatype ReST API</description>
 
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
